@@ -41,6 +41,7 @@ def stride_wrapper(pdb_file_name: str, pdb_length: int):
         # hard code the size for now, TBD
         masked_array = np.ones(303)
         for each_pair in parsed_indices:
+            # the resid starts from 1 
             ss_start_index = int(each_pair[0] - 1)
             ss_end_index = int(each_pair[1] - 1)
             masked_array[ss_start_index:ss_end_index] = 0
