@@ -12,12 +12,18 @@ def parse_stride_output(stride_output):
     """parse the stride output to find the secondary structure indices"""
     # use regex expression to find expression of "LOC NAME resname resid - resname resid -"
     exp = re.findall("LOC \D+ \d{1,5} \- \D+ \d{1,5} \-", stride_output)
+
     indices = np.zeros((len(exp), 2))
     #indices = []
     for idx, each_line in enumerate(exp):
+        # for now, only alphahelix and strand is considered forbidden secondary
+        # structure
+
         tmp = each_line.split()
-        indices[idx, 0] = int(tmp[3])
-        indices[idx, 1] = int(tmp[6])
+        if (tmp[1] == 'AlphaHelix' or tmp[1] == 'Strand'):
+            indices[idx, 0] = int(tmp[3])
+            indices[idx, 1] = int(tmp[6])
+            print(each_line)
    
     return indices
  
@@ -39,7 +45,7 @@ def stride_wrapper(pdb_file_name: str, pdb_length: int):
         parsed_indices = parse_stride_output(stride_output)
 
         # hard code the size for now, TBD
-        masked_array = np.ones(303)
+        masked_array = np.ones(pdb_length)
         for each_pair in parsed_indices:
             # the resid starts from 1 
             ss_start_index = int(each_pair[0] - 1)
@@ -53,7 +59,7 @@ def load_pdb(pdb_file_name: str):
     outputs: atoms, list of residue id, list of residue name
     """
     struct = MDAnalysis.Universe(pdb_file_name, format="PDB")
-    protein = struct.select_atoms("all")
+    protein = struct.select_atoms("protein")
     residue_list = list(protein.residues.resids)
     resname_list = list(protein.residues.resnames)
 
@@ -69,9 +75,9 @@ def main():
     n_amino_acid = len(resid_list)
     n_cut_sites = n_amino_acid - 1
 
-    # a generic wrapper for stride program, TBD
+    # a generic python wrapper for stride program
     protein_mask = stride_wrapper(pdb_file_name, n_amino_acid)
-    #print(protein_mask)
+    print(protein_mask)
 
 
 
