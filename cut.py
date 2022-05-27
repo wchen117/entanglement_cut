@@ -1,8 +1,8 @@
 from ast import parse
 import MDAnalysis
 import numpy as np
-#import gaussian_entanglements as ge
-#import clustering_updated as cluster
+import gaussian_entanglements as ge
+import clustering_updated as cluster
 import subprocess
 import sys
 import re
@@ -11,7 +11,7 @@ import re
 def parse_stride_output(stride_output):
     """parse the stride output to find the secondary structure indices"""
     # use regex expression to find expression of "LOC NAME resname resid - resname resid -"
-    exp = re.findall("LOC \D+ \d{1,5} \- \D+ \d{1,5} \-", stride_output)
+    exp = re.findall("LOC \D+ \d{1,5} \w \D+ \d{1,5} \w", stride_output)
 
     indices = np.zeros((len(exp), 2))
     #indices = []
@@ -63,21 +63,28 @@ def load_pdb(pdb_file_name: str):
     residue_list = list(protein.residues.resids)
     resname_list = list(protein.residues.resnames)
 
-    return protein, residue_list, resname_list
+    return struct, protein, residue_list, resname_list
 
 def main():
 
-    pdb_file_name = "native.pdb"
+    pdb_file_name = "./pdbs/native_chain_B.pdb"
     # the starting cut 
     n_cut = 1
     # load the structure into our system
-    protein, resid_list, resname_list = load_pdb(pdb_file_name)
+    pdb_struct, protein, resid_list, resname_list = load_pdb(pdb_file_name)
     n_amino_acid = len(resid_list)
     n_cut_sites = n_amino_acid - 1
 
     # a generic python wrapper for stride program
     protein_mask = stride_wrapper(pdb_file_name, n_amino_acid)
     print(protein_mask)
+ 
+    list_of_ents = ge.gaussian_entanglement(pdb_file_name)
+
+    if list_of_ents:
+        ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
+    print(ent)
+    print(ent_dict)
 
 
 
