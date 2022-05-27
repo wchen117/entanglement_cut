@@ -263,9 +263,10 @@ def find_crossing(coor: np.ndarray, nc_data: dict, chain: str, resids: np.ndarra
     return entangled_res
 
 
-def gaussian_entanglement(uniprotid: str):
-    pdb = uniprotid.split("_")[-1].split(".")[0]
-    ref_univ = Universe(f"{uniprotid}", topology_format="PDB")
+def gaussian_entanglement(ref_univ:Universe):
+
+    pdb = "default"
+    uniprotid = "default"
 
     ref_calphas_dup = ref_univ.select_atoms("name CA and protein")
 

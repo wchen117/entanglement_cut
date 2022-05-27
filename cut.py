@@ -79,7 +79,7 @@ def main():
     protein_mask = stride_wrapper(pdb_file_name, n_amino_acid)
     print(protein_mask)
  
-    list_of_ents = ge.gaussian_entanglement(pdb_file_name)
+    list_of_ents = ge.gaussian_entanglement(pdb_struct)
 
     if list_of_ents:
         ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
