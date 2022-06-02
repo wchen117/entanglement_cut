@@ -59,11 +59,38 @@ def load_pdb(pdb_file_name: str):
     outputs: atoms, list of residue id, list of residue name
     """
     struct = MDAnalysis.Universe(pdb_file_name, format="PDB")
-    protein = struct.select_atoms("protein")
+
+    return struct
+
+def get_residue_resname_list(pdb_struct: MDAnalysis.Universe):
+
+    """Given the pdb_struct loaded by load_pdb() function,
+       return the list of atoms, residue id and residue name"""
+    protein = pdb_struct.select_atoms("protein")
     residue_list = list(protein.residues.resids)
     resname_list = list(protein.residues.resnames)
 
-    return struct, protein, residue_list, resname_list
+    
+    return protein, residue_list, resname_list
+
+def ent_calc_wrapper(pdb_struct: MDAnalysis.Universe):
+    """
+    wrapper for entanglement wrapper calculation, returns only 
+    the number of entanglement
+    """
+    # note the here input arguments for gaussian_entanglement have been modified
+    # to by of type: str to type: Universe
+    list_of_ents = ge.gaussian_entanglement(pdb_struct)
+
+    if list_of_ents:
+        ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
+    return len(ent_dict)
+    
+def cut_protein(pdb_struct, site_index):
+    """ cut the protein sturcture at a given index, returns a list of protein structure"""
+
+
+    return
 
 def main():
 
@@ -71,21 +98,24 @@ def main():
     # the starting cut 
     n_cut = 1
     # load the structure into our system
-    pdb_struct, protein, resid_list, resname_list = load_pdb(pdb_file_name)
-    n_amino_acid = len(resid_list)
-    n_cut_sites = n_amino_acid - 1
+    pdb_struct = load_pdb(pdb_file_name)
+    protein, resid_list, resname_list = get_residue_resname_list(pdb_struct)
+    n_residue = pdb_struct.residues.n_residues
+    n_cut_sites = n_residue - 1
 
     # a generic python wrapper for stride program
-    protein_mask = stride_wrapper(pdb_file_name, n_amino_acid)
+    protein_mask = stride_wrapper(pdb_file_name, n_residue)
     print(protein_mask)
- 
-    list_of_ents = ge.gaussian_entanglement(pdb_struct)
 
-    if list_of_ents:
-        ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
-    print(ent)
-    print(ent_dict)
+    # calculate the inital number of entanglement, start with this
 
+    initial_ent_num = ent_calc_wrapper(pdb_struct)
+
+    
+
+
+        
+    
 
 
     
