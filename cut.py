@@ -153,7 +153,7 @@ def main():
     tmp_cut_list = resid_list
     # a place to keep track of the cutted sites
 
-    # a place to hold 
+    # a place to hold cut site_indices, for 
     already_cutted_sites = []
 
     for cut_site_index in range(n_cut_sites):
