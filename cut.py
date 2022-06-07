@@ -13,6 +13,7 @@ import clustering_updated as cluster
 import subprocess
 import sys
 import re
+import itertools
 
 
 def parse_stride_output(stride_output):
@@ -92,7 +93,23 @@ def ent_calc_wrapper(pdb_struct: MDAnalysis.Universe):
     if list_of_ents:
         ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
     return len(ent_dict)
+
+def permute_connect(nested_list: list):
+    """ take a nested list produced by cut_protein function, iteratve through all its permutations (A_N^N -1)
+    """
+
+    all_connections = []
+    all_permutations = list(itertools.permutations(nested_list))
     
+    # we should always discard the first one since it's unchanged
+    for each_perm in all_permutations[1:]:
+        left = []
+        for each_piece in each_perm:
+            left += each_piece
+        all_connections.append(left)
+            
+    return all_connections  
+
 def cut_protein(resid_list:list, site_indices:list, max_site: int):
     """ cut the protein sturcture at a given index.
         Note that the only input needed for cutting is resids/ list of resids, which is the first argument
@@ -104,7 +121,7 @@ def cut_protein(resid_list:list, site_indices:list, max_site: int):
     mask = np.array(site_indices) >= max_site
     # all elements must be 0 (site_index >= max_site is false for all input site indices)
     if (mask.prod() != 0):
-        exit("input site_indices larger than max_site is not allowed")
+        exit("input site_indices >= max_site is not allowed")
     else:
         # all indices are legit, sort the indices so that we start from small indices to large
         # essentially left to right
@@ -123,6 +140,7 @@ def cut_protein(resid_list:list, site_indices:list, max_site: int):
             # not sure if we need a deep copy but just in case
             resid_list = right.copy()
             tmp = each_site + tmp
+        del each_site, left, right, tmp
             
         nested_list.append(resid_list)
 
