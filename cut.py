@@ -86,23 +86,40 @@ def ent_calc_wrapper(pdb_struct: MDAnalysis.Universe):
         ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
     return len(ent_dict)
     
-def cut_protein(pdb_struct:MDAnalysis.Universe, site_index:int):
-    """ cut the protein sturcture at a given index, returns a list of protein structure
-    for input site_index = N, the cut is placed between N and N+1. Therefore the maximum site_index allowed is n_residue - 1"""
+def cut_protein(resid_list:list, site_indices:list, max_site: int):
+    """ cut the protein sturcture at a given index.
+        Note that the only input needed for cutting is resids/ list of resids, which is the first argument
+        of this function.
+        Please note that at this stage, the first input must be a complete resid_list, not a nested_list"""
 
-    if (site_index >= pdb_struct.residues.n_residues):
-        exit("cut site index must be smaller than number of residues in protein ")
+    # check if input exceed max_site
+    mask = np.array(site_indices) >= max_site
+    # all elements must be 0 (site_index >= max_site is false for all input site indices)
+    if (mask.prod() != 0):
+        exit("input site_indices larger than max_site is not allowed")
     else:
-        # site_index is allowed
-        protein, resid_list, resname_list = get_residue_resname_list(pdb_struct)
+        # all indices are legit, sort the indices so that we start from small indices to large
+        # essentially left to right
+        site_indices = sorted(site_indices)
+        # cutted list will be put into this nested list, with each element
+        # being a piece of cutted resid_list
+        nested_list = []
+        # variable needed to reset the index of right array
+        tmp = 0
 
-        # cut the protein at site_index
+        for each_site in site_indices:
+            each_site = each_site - tmp
+            left = resid_list[:each_site]
+            nested_list.append(left)
+            right = resid_list[each_site:]
+            # not sure if we need a deep copy but just in case
+            resid_list = right.copy()
+            tmp = each_site + tmp
+            
+        nested_list.append(resid_list)
 
-        rearanged_resid_list = []
-        rearanged_resid_list.append(resid_list[:site_index])
-        rearanged_resid_list.append(resid_list[site_index:])
 
-        return rearanged_resid_list
+    return nested_list
 
 def main():
 
@@ -125,7 +142,7 @@ def main():
     initial_ent_num = ent_calc_wrapper(pdb_struct)
 
     # we need a deep copy, not a reference
-    tmp_cut_struct = pdb_struct.copy()
+    tmp_cut_list = resid_list
     # a place to keep track of the cutted sites
 
     already_cutted_sites = []
