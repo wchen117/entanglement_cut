@@ -86,11 +86,23 @@ def ent_calc_wrapper(pdb_struct: MDAnalysis.Universe):
         ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
     return len(ent_dict)
     
-def cut_protein(pdb_struct, site_index):
-    """ cut the protein sturcture at a given index, returns a list of protein structure"""
+def cut_protein(pdb_struct:MDAnalysis.Universe, site_index:int):
+    """ cut the protein sturcture at a given index, returns a list of protein structure
+    for input site_index = N, the cut is placed between N and N+1. Therefore the maximum site_index allowed is n_residue - 1"""
 
+    if (site_index >= pdb_struct.residues.n_residues):
+        exit("cut site index must be smaller than number of residues in protein ")
+    else:
+        # site_index is allowed
+        protein, resid_list, resname_list = get_residue_resname_list(pdb_struct)
 
-    return
+        # cut the protein at site_index
+
+        rearanged_resid_list = []
+        rearanged_resid_list.append(resid_list[:site_index])
+        rearanged_resid_list.append(resid_list[site_index:])
+
+        return rearanged_resid_list
 
 def main():
 
@@ -101,15 +113,30 @@ def main():
     pdb_struct = load_pdb(pdb_file_name)
     protein, resid_list, resname_list = get_residue_resname_list(pdb_struct)
     n_residue = pdb_struct.residues.n_residues
+    # the maximal number of cut sites available
     n_cut_sites = n_residue - 1
 
-    # a generic python wrapper for stride program
+    # a generic python wrapper for stride program, note that 
     protein_mask = stride_wrapper(pdb_file_name, n_residue)
     print(protein_mask)
 
     # calculate the inital number of entanglement, start with this
 
     initial_ent_num = ent_calc_wrapper(pdb_struct)
+
+    # we need a deep copy, not a reference
+    tmp_cut_struct = pdb_struct.copy()
+    # a place to keep track of the cutted sites
+
+    already_cutted_sites = []
+
+    for cut_site_index in range(n_cut_sites):
+        # see if the cut_site_index cuts into the secondary structure identified by stride program
+        if (protein_mask[cut_site_index] == 1 or cut_site_index not in already_cutted_sites):
+            protein_pieces =  cut_protein(tmp_cut_struct, cut_site_index)
+
+
+
 
     
 
