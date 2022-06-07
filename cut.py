@@ -1,3 +1,10 @@
+##############################################################
+# Cut.py, a simple program to iteratively cut protein to 
+# eliminate entanglement
+# Author: Weinan Chen
+# May 2022
+##############################################################
+
 from ast import parse
 import MDAnalysis
 import numpy as np
@@ -90,7 +97,8 @@ def cut_protein(resid_list:list, site_indices:list, max_site: int):
     """ cut the protein sturcture at a given index.
         Note that the only input needed for cutting is resids/ list of resids, which is the first argument
         of this function.
-        Please note that at this stage, the first input must be a complete resid_list, not a nested_list"""
+        Please note that at this stage, the first input must be a complete resid_list, not a nested_list
+        max_site must be smaller than n_residue - 1"""
 
     # check if input exceed max_site
     mask = np.array(site_indices) >= max_site
@@ -145,12 +153,13 @@ def main():
     tmp_cut_list = resid_list
     # a place to keep track of the cutted sites
 
+    # a place to hold 
     already_cutted_sites = []
 
     for cut_site_index in range(n_cut_sites):
         # see if the cut_site_index cuts into the secondary structure identified by stride program
         if (protein_mask[cut_site_index] == 1 or cut_site_index not in already_cutted_sites):
-            protein_pieces =  cut_protein(tmp_cut_struct, cut_site_index)
+            resid_pieces = cut_protein(tmp_cut_list, )
 
 
 
