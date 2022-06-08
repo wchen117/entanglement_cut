@@ -147,10 +147,25 @@ def cut_protein(resid_list:list, site_indices:list, max_site: int):
 
     return nested_list
 
+def construct_pdb(permuated_list:list, original_list:list):
+    """construct a pdb based on permutated resid_list"""
+    pdb_name = "default"
+    pdb_struct = MDAnalysis.Universe(pdb_name, format="PDB")
+    rewired_residue_positions=list()
+    for resid in original_list:
+        position_in_rewired_list = permuated_list.index(resid)
+        resid_corresponding_to_rewired_list = original_list[position_in_rewired_list]
+        rewired_residue_positions.append(resid_corresponding_to_rewired_list)
+
+    rewired_array = np.array(rewired_residue_positions)
+    pdb_struct.residues.resids = rewired_array
+    
+    return pdb_struct
+
 def main():
 
     pdb_file_name = "./pdbs/native_chain_B.pdb"
-    # the starting cut 
+    # the starting number of cut sites to consider
     n_cut = 1
     # load the structure into our system
     pdb_struct = load_pdb(pdb_file_name)
@@ -171,27 +186,52 @@ def main():
     tmp_cut_list = resid_list
     # a place to keep track of the cutted sites
 
-    # a place to hold cut site_indices, for 
+    # a place to hold cut site_indices, only hold 
+    # optimal value for each n_cut value
     already_cutted_sites = []
-
-    for cut_site_index in range(n_cut_sites):
-        # see if the cut_site_index cuts into the secondary structure identified by stride program
-        if (protein_mask[cut_site_index] == 1 or cut_site_index not in already_cutted_sites):
-            resid_pieces = cut_protein(tmp_cut_list, )
-
-
-
-
+ 
     
+    # for now limit the maximum concurrent cut to 5
+    while (n_cut < 5):
+        # need a place to hold temp indices
+        local_index = -1
 
+        for cut_site_index in range(n_cut_sites):
+            # the first n elements of local_cut_sites are from previous 
+            local_cut_sites = []
+            # taking in account cut sites from the previous iterations 
+            local_cut_sites = already_cutted_sites + [cut_site_index,]
+            # see if the cut_site_index cuts into the secondary structure identified by stride program
+            if (protein_mask[cut_site_index] == 1 or cut_site_index not in already_cutted_sites):
+                nested_resid_pieces = cut_protein(tmp_cut_list, local_cut_sites, n_cut_sites)
+                # each configuration is 
+                all_configs = permute_connect(nested_resid_pieces)
+                for each_config in all_configs:
+                    # compute the number of entanglement (perhaps G. score) per configuration
+                    tmp_pdb = construct_pdb(each_config)
+                    tmp_ent_num = ent_calc_wrapper(tmp_pdb)
+                    if tmp_ent_num < initial_ent_num:
+                        # pick one that gives rise to a smaller number of entanglement
+                        initial_ent_num = tmp_ent_num.copy()
+                        # stash its index in a tmp variable
+                        local_index = cut_site_index.copy()
+            else:
+                # if site has been considered or in a prohibited secondary structure
+                continue
+            
+            # we actually one or more index
+        if (local_index != -1):
+            already_cutted_sites.append(local_index)
+            n_cut = n_cut + 1
 
+        else:
+            exit("no candidate found in {n_cut} ".format(n_cut = n_cut) )
+                        
+                        
         
-    
-
-
     
     return
 
 if __name__ == '__main__':
-    main();
+    main()
     
