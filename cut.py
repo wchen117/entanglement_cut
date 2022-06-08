@@ -208,7 +208,7 @@ def main():
                 all_configs = permute_connect(nested_resid_pieces)
                 for each_config in all_configs:
                     # compute the number of entanglement (perhaps G. score) per configuration
-                    tmp_pdb = construct_pdb(each_config)
+                    tmp_pdb = construct_pdb(each_config, resid_list)
                     tmp_ent_num = ent_calc_wrapper(tmp_pdb)
                     if tmp_ent_num < initial_ent_num:
                         # pick one that gives rise to a smaller number of entanglement
@@ -219,11 +219,11 @@ def main():
                 # if site has been considered or in a prohibited secondary structure
                 continue
             
-            # we actually one or more index
+        # we actually one or more index
         if (local_index != -1):
             already_cutted_sites.append(local_index)
             n_cut = n_cut + 1
-
+        # well... shall we keep on searching or just quit?
         else:
             exit("no candidate found in {n_cut} ".format(n_cut = n_cut) )
                         
