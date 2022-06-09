@@ -100,7 +100,7 @@ def permute_connect(nested_list: list):
 
     all_connections = []
     all_permutations = list(itertools.permutations(nested_list))
-    
+   
     # we should always discard the first one since it's unchanged
     for each_perm in all_permutations[1:]:
         left = []
@@ -147,10 +147,9 @@ def cut_protein(resid_list:list, site_indices:list, max_site: int):
 
     return nested_list
 
-def construct_pdb(permuated_list:list, original_list:list):
-    """construct a pdb based on permutated resid_list"""
-    pdb_name = "default"
-    pdb_struct = MDAnalysis.Universe(pdb_name, format="PDB")
+def construct_pdb(permuated_list:list, original_list:list, new_pdb: MDAnalysis.Universe):
+    """construct a pdb based on permutated resid_list, also need a copy of pdb_struct in the main func"""
+    
     rewired_residue_positions=list()
     for resid in original_list:
         position_in_rewired_list = permuated_list.index(resid)
@@ -158,9 +157,10 @@ def construct_pdb(permuated_list:list, original_list:list):
         rewired_residue_positions.append(resid_corresponding_to_rewired_list)
 
     rewired_array = np.array(rewired_residue_positions)
-    pdb_struct.residues.resids = rewired_array
+    new_pdb.residues.resids = rewired_array
     
-    return pdb_struct
+    # return the new_pdb with modified resids
+    return new_pdb
 
 def main():
 
@@ -202,19 +202,22 @@ def main():
             # taking in account cut sites from the previous iterations 
             local_cut_sites = already_cutted_sites + [cut_site_index,]
             # see if the cut_site_index cuts into the secondary structure identified by stride program
-            if (protein_mask[cut_site_index] == 1 or cut_site_index not in already_cutted_sites):
+            if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
                 nested_resid_pieces = cut_protein(tmp_cut_list, local_cut_sites, n_cut_sites)
                 # each configuration is 
                 all_configs = permute_connect(nested_resid_pieces)
                 for each_config in all_configs:
                     # compute the number of entanglement (perhaps G. score) per configuration
-                    tmp_pdb = construct_pdb(each_config, resid_list)
+                    # need a copy of the current pdb_struct to create new_pdb 
+                    tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
                     tmp_ent_num = ent_calc_wrapper(tmp_pdb)
+                    print("cut_site_index {cut_site} return {num_ent} entanglements".format(cut_site = cut_site_index, num_ent= tmp_ent_num))
                     if tmp_ent_num < initial_ent_num:
                         # pick one that gives rise to a smaller number of entanglement
                         initial_ent_num = tmp_ent_num.copy()
                         # stash its index in a tmp variable
                         local_index = cut_site_index.copy()
+                    del tmp_pdb
             else:
                 # if site has been considered or in a prohibited secondary structure
                 continue
@@ -225,7 +228,7 @@ def main():
             n_cut = n_cut + 1
         # well... shall we keep on searching or just quit?
         else:
-            exit("no candidate found in {n_cut} ".format(n_cut = n_cut) )
+            exit("no candidate found in n_cut = {n_cut} ".format(n_cut = n_cut) )
                         
                         
         
