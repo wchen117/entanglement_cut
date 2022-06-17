@@ -14,6 +14,18 @@ import subprocess
 import sys
 import re
 import itertools
+from anytree import Node, RenderTree
+
+class IndexNode(Node):
+    """
+       A derived class based on Node containing two additional quantities: 
+       Index (resid) and Ent (num of entanglement/partial linking number)
+    """
+    def __init__(self, name, Ent=-1, Index=-1,  parent=None, children=None, **kwargs):
+        super().__init__(name, parent, children, **kwargs)
+        # set default value to -1 for error handling
+        self.Ent = Ent
+        self.Index = Index
 
 
 def parse_stride_output(stride_output):
@@ -188,13 +200,20 @@ def main():
 
     # a place to hold cut site_indices, only hold 
     # optimal value for each n_cut value
+    # in a tree implementation, this is replaced by one of the transversed path
+    # for each n_cut iteration now, we need to iteratiev through all of the tranversed paths
+    
     already_cutted_sites = []
+    # the global tree structure that keep tracks of cutting indices
+
+    root = Node("root")
  
     
     # for now limit the maximum concurrent cut to 5
     while (n_cut < 5):
         # need a place to hold temp indices
         local_index = -1
+        # here is the place to tranverse the paths of the node, 
 
         for cut_site_index in range(n_cut_sites):
             # the first n elements of local_cut_sites are from previous 
@@ -212,12 +231,15 @@ def main():
                     tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
                     tmp_ent_num = ent_calc_wrapper(tmp_pdb)
                     print("cut_site_index {cut_site} return {num_ent} entanglements".format(cut_site = cut_site_index, num_ent= tmp_ent_num))
-                    if tmp_ent_num < initial_ent_num:
+
+                    # could be equal to what we have now
+                    if tmp_ent_num <= initial_ent_num:
                         # pick one that gives rise to a smaller number of entanglement
                         initial_ent_num = tmp_ent_num.copy()
                         # stash its index in a tmp variable
                         local_index = cut_site_index.copy()
                     del tmp_pdb
+                    
             else:
                 # if site has been considered or in a prohibited secondary structure
                 continue
