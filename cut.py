@@ -14,18 +14,7 @@ import subprocess
 import sys
 import re
 import itertools
-from anytree import Node, RenderTree
-
-class IndexNode(Node):
-    """
-       A derived class based on Node containing two additional quantities: 
-       Index (resid) and Ent (num of entanglement/partial linking number)
-    """
-    def __init__(self, name, Ent=-1, Index=-1,  parent=None, children=None, **kwargs):
-        super().__init__(name, parent, children, **kwargs)
-        # set default value to -1 for error handling
-        self.Ent = Ent
-        self.Index = Index
+from IndexNode import IndexNode
 
 
 def parse_stride_output(stride_output):
