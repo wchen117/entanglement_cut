@@ -268,7 +268,7 @@ def main():
              # for each terminal nodes in this tree 
             for leaf in tree_struct.leaves:
                 previous_cut_sites = leaf.getIndexPath()
-                list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
+                list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, leaf.Ent)
                 tree_struct = attach_nodes(leaf, list_of_new_nodes)
 
         n_cut = n_cut + 1
