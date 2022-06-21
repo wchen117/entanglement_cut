@@ -236,18 +236,13 @@ def main():
 
     # a generic python wrapper for stride program, note that 
     protein_mask = stride_wrapper(pdb_file_name, n_residue)
-    print(protein_mask)
+    #print(protein_mask)
 
     # calculate the inital number of entanglement, start with this
-
     initial_ent_num = ent_calc_wrapper(pdb_struct)
-
-    # we need a deep copy, not a reference
-    #tmp_cut_list = resid_list
 
     # the global tree structure that keep tracks of cutting indices
     # we use the IndexNode class for this
-
     tree_struct = IndexNode("root")
  
     
@@ -265,7 +260,7 @@ def main():
             list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
             tree_struct = attach_nodes(tree_struct, list_of_new_nodes)
         else: 
-             # for each terminal nodes in this tree 
+             # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
             for leaf in tree_struct.leaves:
                 previous_cut_sites = leaf.getIndexPath()
                 list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, leaf.Ent)
