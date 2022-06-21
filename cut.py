@@ -243,7 +243,8 @@ def main():
 
     # the global tree structure that keep tracks of cutting indices
     # we use the IndexNode class for this
-    tree_struct = IndexNode("root")
+    # the root node has a default index of -1 
+    tree_struct = IndexNode("root", Ent=initial_ent_num)
  
     
     # for now limit the maximum concurrent cut to 5
@@ -257,14 +258,17 @@ def main():
         # all 302 cut sites for n_cut = 1 scenarios
         if n_cut == 1:
             previous_cut_sites = []
-            list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
-            tree_struct = attach_nodes(tree_struct, list_of_new_nodes)
+            list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, 6, pdb_struct, tree_struct.Ent)
+
+            #list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
+            attach_nodes(tree_struct, list_of_new_nodes)
         else: 
              # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
             for leaf in tree_struct.leaves:
                 previous_cut_sites = leaf.getIndexPath()
                 list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, leaf.Ent)
-                tree_struct = attach_nodes(leaf, list_of_new_nodes)
+                attach_nodes(leaf, list_of_new_nodes)
+        tree_struct.visualize()
 
         n_cut = n_cut + 1
 

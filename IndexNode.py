@@ -28,7 +28,9 @@ class IndexNode(Node):
         """
        
         index_list = []
-        for pa in self.ancestors:
+        for pa in self.path:
+            if pa.Index == -1:
+                continue
             index_list.append(pa.Index)
         return index_list
 
