@@ -93,8 +93,12 @@ def ent_calc_wrapper(pdb_struct: MDAnalysis.Universe):
     list_of_ents = ge.gaussian_entanglement(pdb_struct)
 
     if list_of_ents:
-        ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
-    return len(ent_dict)
+        ent_dict, ent=cluster.cluster_entanglements(list_of_ents, 55)
+
+        if ent_dict:
+            return len(ent_dict)
+        else:
+            import ipdb; ipdb.set_trace()
 
 def permute_connect(nested_list: list):
     """ take a nested list produced by cut_protein function, iteratve through all its permutations (A_N^N -1)
