@@ -15,6 +15,7 @@ import sys
 import re
 import itertools
 from IndexNode import IndexNode
+from anytree import RenderTree
 
 
 def parse_stride_output(stride_output):
@@ -163,6 +164,64 @@ def construct_pdb(permuated_list:list, original_list:list, new_pdb: MDAnalysis.U
     # return the new_pdb with modified resids
     return new_pdb
 
+def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_list: list, \
+                  n_cut_sites: int, pdb_struct: MDAnalysis.Universe, initial_ent_num: int):
+
+    """A function wrapper for looping through all the cut sites in protein chain,
+       taking into account already_cutted_sites from previous n_cut numbers, 
+       and try to find new configurations that has smaller or equal number of entanglements,
+       and return them as a list of new nodes"""
+    
+    list_of_new_nodes = []
+    for cut_site_index in range(n_cut_sites):
+        # need to unpack the tree structure, so that for each path
+        # one could get a list of indices on the path, to form a local_cut_sites list
+
+        # the first n elements of local_cut_sites are from previous 
+        #local_cut_sites = []
+        # taking in account cut sites from the previous iterations 
+        local_cut_sites = already_cutted_sites + [cut_site_index,]
+        # see if the cut_site_index cuts into the secondary structure identified by stride program
+        if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
+            nested_resid_pieces = cut_protein(resid_list, local_cut_sites, n_cut_sites)
+            # each configuration is 
+            all_configs = permute_connect(nested_resid_pieces)
+            for each_config in all_configs:
+                # compute the number of entanglement (perhaps G. score) per configuration
+                # need a copy of the current pdb_struct to create new_pdb 
+                tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
+                tmp_ent_num = ent_calc_wrapper(tmp_pdb)
+                print("cut_site_index {cut_site} return {num_ent} entanglements".\
+                        format(cut_site = cut_site_index, num_ent= tmp_ent_num))
+
+                # could be equal to what we have now
+                if tmp_ent_num <= initial_ent_num:
+                    # pick one that gives rise to a smaller number of entanglement
+                    #initial_ent_num = tmp_ent_num.copy()
+                    # stash its index in a tmp variable
+                    #local_index = cut_site_index.copy()
+                    newNode = IndexNode("{index}".format(index=cut_site_index), Ent=tmp_ent_num, Index=cut_site_index)
+                    list_of_new_nodes.append(newNode)
+                del tmp_pdb
+                    
+        else:
+            # if site has been considered or in a prohibited secondary structure
+            continue
+            
+    # we actually have one or more index
+    
+    return list_of_new_nodes
+
+def attach_nodes(node: IndexNode, list_of_nodes: list):
+
+    """attach list_of_nodes (list) as new leaves of input node (IndexNode)"""
+
+    for each_node in list_of_nodes:
+         each_node.parent = node
+
+    return
+
+
 def main():
 
     pdb_file_name = "./pdbs/native_chain_B.pdb"
@@ -184,18 +243,12 @@ def main():
     initial_ent_num = ent_calc_wrapper(pdb_struct)
 
     # we need a deep copy, not a reference
-    tmp_cut_list = resid_list
-    # a place to keep track of the cutted sites
+    #tmp_cut_list = resid_list
 
-    # a place to hold cut site_indices, only hold 
-    # optimal value for each n_cut value
-    # in a tree implementation, this is replaced by one of the transversed path
-    # for each n_cut iteration now, we need to iteratiev through all of the tranversed paths
-    
-    already_cutted_sites = []
     # the global tree structure that keep tracks of cutting indices
+    # we use the IndexNode class for this
 
-    root = Node("root")
+    tree_struct = IndexNode("root")
  
     
     # for now limit the maximum concurrent cut to 5
@@ -203,44 +256,24 @@ def main():
         # need a place to hold temp indices
         local_index = -1
         # here is the place to tranverse the paths of the node, 
+        # for each leaf of the tree_struct, 
 
-        for cut_site_index in range(n_cut_sites):
-            # the first n elements of local_cut_sites are from previous 
-            local_cut_sites = []
-            # taking in account cut sites from the previous iterations 
-            local_cut_sites = already_cutted_sites + [cut_site_index,]
-            # see if the cut_site_index cuts into the secondary structure identified by stride program
-            if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
-                nested_resid_pieces = cut_protein(tmp_cut_list, local_cut_sites, n_cut_sites)
-                # each configuration is 
-                all_configs = permute_connect(nested_resid_pieces)
-                for each_config in all_configs:
-                    # compute the number of entanglement (perhaps G. score) per configuration
-                    # need a copy of the current pdb_struct to create new_pdb 
-                    tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
-                    tmp_ent_num = ent_calc_wrapper(tmp_pdb)
-                    print("cut_site_index {cut_site} return {num_ent} entanglements".format(cut_site = cut_site_index, num_ent= tmp_ent_num))
+        # if we are starting, no need to check for leaves, directly continue to test
+        # all 302 cut sites for n_cut = 1 scenarios
+        if n_cut == 1:
+            previous_cut_sites = []
+            list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
+            tree_struct = attach_nodes(tree_struct, list_of_new_nodes)
+        else: 
+             # for each terminal nodes in this tree 
+            for leaf in tree_struct.leaves:
+                previous_cut_sites = leaf.getIndexPath()
+                list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
+                tree_struct = attach_nodes(leaf, list_of_new_nodes)
 
-                    # could be equal to what we have now
-                    if tmp_ent_num <= initial_ent_num:
-                        # pick one that gives rise to a smaller number of entanglement
-                        initial_ent_num = tmp_ent_num.copy()
-                        # stash its index in a tmp variable
-                        local_index = cut_site_index.copy()
-                    del tmp_pdb
-                    
-            else:
-                # if site has been considered or in a prohibited secondary structure
-                continue
-            
-        # we actually one or more index
-        if (local_index != -1):
-            already_cutted_sites.append(local_index)
-            n_cut = n_cut + 1
-        # well... shall we keep on searching or just quit?
-        else:
-            exit("no candidate found in n_cut = {n_cut} ".format(n_cut = n_cut) )
-                        
+        n_cut = n_cut + 1
+
+
                         
         
     
