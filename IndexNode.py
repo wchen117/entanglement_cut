@@ -29,7 +29,8 @@ class IndexNode(Node):
        
         index_list = []
         for pa in self.path:
-            if pa.Index == -1:
+            # omit the root node which by default has an index value of -1
+            if (pa.Index == -1 and pa.is_root):
                 continue
             index_list.append(pa.Index)
         return index_list

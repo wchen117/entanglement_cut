@@ -16,6 +16,7 @@ import re
 import itertools
 from IndexNode import IndexNode
 from anytree import RenderTree
+from rewiring_new_without_invert import write_pdb
 
 
 def parse_stride_output(stride_output):
@@ -93,8 +94,13 @@ def ent_calc_wrapper(pdb_struct: MDAnalysis.Universe):
     list_of_ents = ge.gaussian_entanglement(pdb_struct)
 
     if list_of_ents:
-        ent_dict,ent=cluster.cluster_entanglements(list_of_ents, 55)
-    return len(ent_dict)
+        ent_dict, ent=cluster.cluster_entanglements(list_of_ents, 55)
+
+        if ent_dict is not None:
+            return len(ent_dict)
+    else:
+        # no entanglement, yay!
+        return -1
 
 def permute_connect(nested_list: list):
     """ take a nested list produced by cut_protein function, iteratve through all its permutations (A_N^N -1)
@@ -181,6 +187,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
         #local_cut_sites = []
         # taking in account cut sites from the previous iterations 
         local_cut_sites = already_cutted_sites + [cut_site_index,]
+        #local_cut_sites = [5,250]
         # see if the cut_site_index cuts into the secondary structure identified by stride program
         if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
             nested_resid_pieces = cut_protein(resid_list, local_cut_sites, n_cut_sites)
@@ -191,10 +198,21 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                 # need a copy of the current pdb_struct to create new_pdb 
                 tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
                 tmp_ent_num = ent_calc_wrapper(tmp_pdb)
-                print("cut_site_index {cut_site} return {num_ent} entanglements".\
-                        format(cut_site = cut_site_index, num_ent= tmp_ent_num))
+                print("local_cut_sites = ", local_cut_sites)
+                print("config = ", each_config)
+
+                #print("cut_site_index {cut_site} return {num_ent} entanglements".\
+                #        format(cut_site = cut_site_index, num_ent= tmp_ent_num))
 
                 # could be equal to what we have now
+                if tmp_ent_num == -1:
+                    # found a candidate, write it out
+                    out_name = "_".join(str(x) for x in local_cut_sites)
+                    write_pdb(tmp_pdb, "{name}.pdb".format(name = out_name))
+                    # can we just .... exit here?
+                    exit(0) 
+                    #import ipdb; ipdb.set_trace()
+                
                 if tmp_ent_num <= initial_ent_num:
                     # pick one that gives rise to a smaller number of entanglement
                     #initial_ent_num = tmp_ent_num.copy()
@@ -258,9 +276,9 @@ def main():
         # all 302 cut sites for n_cut = 1 scenarios
         if n_cut == 1:
             previous_cut_sites = []
-            list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, 6, pdb_struct, tree_struct.Ent)
+            #list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, 6, pdb_struct, tree_struct.Ent)
 
-            #list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
+            list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
             attach_nodes(tree_struct, list_of_new_nodes)
         else: 
              # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
