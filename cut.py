@@ -16,6 +16,7 @@ import re
 import itertools
 from IndexNode import IndexNode
 from anytree import RenderTree
+from rewiring_new_without_invert import write_pdb
 
 
 def parse_stride_output(stride_output):
@@ -95,10 +96,11 @@ def ent_calc_wrapper(pdb_struct: MDAnalysis.Universe):
     if list_of_ents:
         ent_dict, ent=cluster.cluster_entanglements(list_of_ents, 55)
 
-        if ent_dict:
+        if ent_dict is not None:
             return len(ent_dict)
-        else:
-            import ipdb; ipdb.set_trace()
+    else:
+        # no entanglement, yay!
+        return -1
 
 def permute_connect(nested_list: list):
     """ take a nested list produced by cut_protein function, iteratve through all its permutations (A_N^N -1)
@@ -185,6 +187,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
         #local_cut_sites = []
         # taking in account cut sites from the previous iterations 
         local_cut_sites = already_cutted_sites + [cut_site_index,]
+        #local_cut_sites = [5,250]
         # see if the cut_site_index cuts into the secondary structure identified by stride program
         if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
             nested_resid_pieces = cut_protein(resid_list, local_cut_sites, n_cut_sites)
@@ -195,10 +198,21 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                 # need a copy of the current pdb_struct to create new_pdb 
                 tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
                 tmp_ent_num = ent_calc_wrapper(tmp_pdb)
-                print("cut_site_index {cut_site} return {num_ent} entanglements".\
-                        format(cut_site = cut_site_index, num_ent= tmp_ent_num))
+                print("local_cut_sites = ", local_cut_sites)
+                print("config = ", each_config)
+
+                #print("cut_site_index {cut_site} return {num_ent} entanglements".\
+                #        format(cut_site = cut_site_index, num_ent= tmp_ent_num))
 
                 # could be equal to what we have now
+                if tmp_ent_num == -1:
+                    # found a candidate, write it out
+                    out_name = "_".join(str(x) for x in local_cut_sites)
+                    write_pdb(tmp_pdb, "{name}.pdb".format(name = out_name))
+                    # can we just .... exit here?
+                    exit(0) 
+                    #import ipdb; ipdb.set_trace()
+                
                 if tmp_ent_num <= initial_ent_num:
                     # pick one that gives rise to a smaller number of entanglement
                     #initial_ent_num = tmp_ent_num.copy()
