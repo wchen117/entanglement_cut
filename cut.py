@@ -8,8 +8,8 @@
 from ast import parse
 import MDAnalysis
 import numpy as np
-import gaussian_entanglements as ge
-import clustering_updated as cluster
+import gaussian_ent.gaussian_entanglements as ge
+import gaussian_ent.clustering_updated as cluster
 import subprocess
 import sys
 import re

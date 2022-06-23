@@ -4,8 +4,8 @@ import sys
 sys.path.append("../../Codes")
 
 
-import gaussian_entanglements as ge
-import clustering_updated as cluster
+import gaussian_ent.gaussian_entanglements as ge
+import gaussian_ent.clustering_updated as cluster
 
 
 from warnings import filterwarnings
