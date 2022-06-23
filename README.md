@@ -1,10 +1,10 @@
-# entanglement_cut
+# EntangleCut
 
 A simple Python program to eliminate protein entanglements.
 
 ## Usage
 
-Python cut.py
+Python EntangleCut.py
 
 ## Dependency
 
