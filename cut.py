@@ -16,7 +16,7 @@ import re
 import itertools
 from IndexNode import IndexNode
 from anytree import RenderTree
-from rewiring_new_without_invert import write_pdb
+from gaussian_ent.rewiring_new_without_invert import write_pdb
 
 
 def parse_stride_output(stride_output):
