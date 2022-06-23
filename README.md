@@ -1,6 +1,6 @@
 # entanglement_cut
 
-A simple Python program to eliminate protein entanglements
+A simple Python program to eliminate protein entanglements.
 
 ## Usage
 
@@ -18,6 +18,7 @@ This program uses the tree/node data structure to keep track of the cut indices.
 
 ### MDAnalysis (https://www.mdanalysis.org)
 
+This programs uses MDAnalysis as a framework to manipulate protein structures. 
 
 
 
