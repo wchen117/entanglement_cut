@@ -204,7 +204,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                 #print("cut_site_index {cut_site} return {num_ent} entanglements".\
                 #        format(cut_site = cut_site_index, num_ent= tmp_ent_num))
 
-                # could be equal to what we have now
+                # found a ent = 0 case
                 if tmp_ent_num == -1:
                     # found a candidate, write it out
                     out_name = "_".join(str(x) for x in local_cut_sites)
