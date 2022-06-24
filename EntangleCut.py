@@ -121,23 +121,18 @@ def permute_connect(nested_list: list):
 def compute_residue_distance(pdb_struct: MDAnalysis.Universe, resid_config: list):
     """Given a reconstructed pdb, compute the max inter-residue distances
         so that the maximum inter-residue distance is <= 8 angstrom"""
-    residue_pos = pdb_struct.atoms.center_of_mass(compound='residues')
+    residue_pos = pdb_struct.select_atoms("name CA").positions
     # reconnected cut sites are those whose indices changes abruptly
     cut_sites = np.where(np.diff(resid_config) !=1)
     
-    # for debug purposes, we look at distances all neighbouring pairs of residues
-    neigh_dist = np.linalg.norm(np.diff(residue_pos, axis=0), axis=1)
-    # find all sites that have a inter-residue distance of 8 angs
-    mask = neigh_dist > 8
-    print(np.where(mask))
-    
     for each_site in cut_sites[0]:
-        tmp_dist = np.linalg.norm(residue_pos[each_site]-residue_pos[each_site+1])
+        #site_index = resid_config[each_site]
+        left = resid_config[each_site] - 1
+        right = resid_config[each_site+1] - 1
+        tmp_dist = np.linalg.norm(residue_pos[left] - residue_pos[right])
         if tmp_dist > 8:
-            print(each_site)
+            #print(each_site)
             return -1
-
-    import ipdb; ipdb.set_trace()
 
     return 0
 
@@ -209,8 +204,8 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
         # the first n elements of local_cut_sites are from previous 
         #local_cut_sites = []
         # taking in account cut sites from the previous iterations 
-        #local_cut_sites = already_cutted_sites + [cut_site_index,]
-        local_cut_sites = [5,250]
+        local_cut_sites = already_cutted_sites + [cut_site_index,]
+        #local_cut_sites = [5,250]
         # see if the cut_site_index cuts into the secondary structure identified by stride program
         if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
             nested_resid_pieces = cut_protein(resid_list, local_cut_sites, n_cut_sites)
@@ -222,6 +217,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                 tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
                 # we can try to enforce the constrain (<= 8 angstrom inter-residue distance) here
                 distance_constrain = compute_residue_distance(tmp_pdb, each_config)
+                # the reconnected residues are further apart than 8 angstrom
                 if distance_constrain < 0:
                     break
                 tmp_ent_num = ent_calc_wrapper(tmp_pdb)
@@ -277,7 +273,7 @@ def main():
     n_cut = 1
     # load the structure into our system
     pdb_struct = load_pdb(pdb_file_name)
-    compute_residue_distance(pdb_struct, [])
+    #compute_residue_distance(pdb_struct, [])
     protein, resid_list, resname_list = get_residue_resname_list(pdb_struct)
     n_residue = pdb_struct.residues.n_residues
     # the maximal number of cut sites available
