@@ -188,8 +188,21 @@ def construct_pdb(permuated_list:list, original_list:list, new_pdb: MDAnalysis.U
     # return the new_pdb with modified resids
     return new_pdb
 
+def cut_site_separation_constrain(previous_site_list: list, new_site: int, separation: int):
+    """A constrain such that the new site is at least n (n = separation) 
+       site away from sites in previous_site_list
+       return 0 or 1"""
+
+    mask = np.abs(new_site - np.array(previous_site_list)) >= separation
+
+    # if true for all elements, return 1
+    # otherwise return 0
+    return np.prod(mask)
+
+
 def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_list: list, \
-                  n_cut_sites: int, pdb_struct: MDAnalysis.Universe, initial_ent_num: int):
+                  n_cut_sites: int, pdb_struct: MDAnalysis.Universe, initial_ent_num: int, \
+                  site_separation: int):
 
     """A function wrapper for looping through all the cut sites in protein chain,
        taking into account already_cutted_sites from previous n_cut numbers, 
@@ -198,6 +211,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
     
     list_of_new_nodes = []
     for cut_site_index in range(n_cut_sites):
+        print("working on cut_site_index = %d ..."%(cut_site_index))
         # need to unpack the tree structure, so that for each path
         # one could get a list of indices on the path, to form a local_cut_sites list
 
@@ -205,6 +219,13 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
         #local_cut_sites = []
         # taking in account cut sites from the previous iterations 
         local_cut_sites = already_cutted_sites + [cut_site_index,]
+
+        site_boolean = cut_site_separation_constrain(already_cutted_sites, cut_site_index, site_separation)
+
+ 
+        if site_boolean == 0:
+            break
+         
         #local_cut_sites = [5,250]
         # see if the cut_site_index cuts into the secondary structure identified by stride program
         if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
@@ -271,6 +292,10 @@ def main():
     pdb_file_name = "./pdbs/native_chain_B.pdb"
     # the starting number of cut sites to consider
     n_cut = 1
+
+    # minimum site separation between cut sites
+    separation = 4
+
     # load the structure into our system
     pdb_struct = load_pdb(pdb_file_name)
     #compute_residue_distance(pdb_struct, [])
@@ -305,13 +330,15 @@ def main():
             previous_cut_sites = []
             #list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, 6, pdb_struct, tree_struct.Ent)
 
-            list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, initial_ent_num)
+            list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
+                                              n_cut_sites, pdb_struct, initial_ent_num, separation)
             attach_nodes(tree_struct, list_of_new_nodes)
         else: 
              # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
             for leaf in tree_struct.leaves:
                 previous_cut_sites = leaf.getIndexPath()
-                list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, n_cut_sites, pdb_struct, leaf.Ent)
+                list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
+                                                  n_cut_sites, pdb_struct, leaf.Ent, separation)
                 attach_nodes(leaf, list_of_new_nodes)
         tree_struct.visualize()
 
