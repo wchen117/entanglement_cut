@@ -5,7 +5,7 @@
 # May 2022
 ##############################################################
 
-from ast import parse
+from ast import arg, parse
 import MDAnalysis
 import numpy as np
 import gaussian_ent.gaussian_entanglements as ge
@@ -17,6 +17,7 @@ import itertools
 from IndexNode import IndexNode
 from anytree import RenderTree
 from gaussian_ent.rewiring_new_without_invert import write_pdb
+import argparse
 
 
 def parse_stride_output(stride_output):
@@ -118,9 +119,9 @@ def permute_connect(nested_list: list):
             
     return all_connections  
 
-def compute_residue_distance(pdb_struct: MDAnalysis.Universe, resid_config: list):
+def compute_residue_distance(pdb_struct: MDAnalysis.Universe, resid_config: list, max_distance: int):
     """Given a reconstructed pdb, compute the max inter-residue distances
-        so that the maximum inter-residue distance is <= 8 angstrom"""
+        so that the maximum inter-residue distance is <= max_distance (angstrom)"""
     residue_pos = pdb_struct.select_atoms("name CA").positions
     # reconnected cut sites are those whose indices changes abruptly
     cut_sites = np.where(np.diff(resid_config) !=1)
@@ -130,7 +131,7 @@ def compute_residue_distance(pdb_struct: MDAnalysis.Universe, resid_config: list
         left = resid_config[each_site] - 1
         right = resid_config[each_site+1] - 1
         tmp_dist = np.linalg.norm(residue_pos[left] - residue_pos[right])
-        if tmp_dist > 8:
+        if tmp_dist > max_distance:
             #print(each_site)
             return -1
 
@@ -202,7 +203,7 @@ def cut_site_separation_constrain(previous_site_list: list, new_site: int, separ
 
 def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_list: list, \
                   n_cut_sites: int, pdb_struct: MDAnalysis.Universe, initial_ent_num: int, \
-                  site_separation: int):
+                  site_separation: int, max_distance: int):
 
     """A function wrapper for looping through all the cut sites in protein chain,
        taking into account already_cutted_sites from previous n_cut numbers, 
@@ -221,8 +222,6 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
         local_cut_sites = already_cutted_sites + [cut_site_index,]
 
         site_boolean = cut_site_separation_constrain(already_cutted_sites, cut_site_index, site_separation)
-
- 
         if site_boolean == 0:
             break
          
@@ -237,7 +236,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                 # need a copy of the current pdb_struct to create new_pdb 
                 tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
                 # we can try to enforce the constrain (<= 8 angstrom inter-residue distance) here
-                distance_constrain = compute_residue_distance(tmp_pdb, each_config)
+                distance_constrain = compute_residue_distance(tmp_pdb, each_config, max_distance)
                 # the reconnected residues are further apart than 8 angstrom
                 if distance_constrain < 0:
                     break
@@ -284,21 +283,38 @@ def attach_nodes(node: IndexNode, list_of_nodes: list):
     return
 
 
+def parse_arg():
+    """parse the input argument. for now, the code accepts: 1. input file name
+       2. cut site index separations 3. max separation distance between two connected sites
+       4. max number of iterations"""
+    helper_message = "A simple python program to iteratively cut protein chains. Usage: Python EntangleCut.py"
+    parser = argparse.ArgumentParser(description=helper_message)
+    
+    parser.add_argument("-f", type=str, default = "./pdbs/native_chain_B.pdb", help="required field for input pdb file")
+    parser.add_argument("-s", type=int, default = 4, help="minimum cut site indices separations, default = 4")
+    parser.add_argument("-m", type=int, default = 8, help="maximum geometric distance threshold between two re-connected sites in Angstrom, default = 8")
+    parser.add_argument("-i", type=int, default = 3, help="maximum number of concurrent cut sites to consider, default = 3")
 
+    return parser.parse_args()
 
 
 def main():
 
-    pdb_file_name = "./pdbs/native_chain_B.pdb"
+    # parse command line argument
+    parsed_arg = parse_arg()
+   
+    pdb_file_name = parsed_arg.f
+    separation = parsed_arg.s
+    max_distance = parsed_arg.m
+    max_iteration = parsed_arg.i
+    
+
     # the starting number of cut sites to consider
     n_cut = 1
 
-    # minimum site separation between cut sites
-    separation = 4
-
     # load the structure into our system
     pdb_struct = load_pdb(pdb_file_name)
-    #compute_residue_distance(pdb_struct, [])
+
     protein, resid_list, resname_list = get_residue_resname_list(pdb_struct)
     n_residue = pdb_struct.residues.n_residues
     # the maximal number of cut sites available
@@ -318,7 +334,7 @@ def main():
  
     
     # for now limit the maximum concurrent cut to 5
-    while (n_cut < 5):
+    while (n_cut < max_iteration):
         # need a place to hold temp indices
         local_index = -1
         # here is the place to tranverse the paths of the node, 
@@ -331,14 +347,14 @@ def main():
             #list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list, 6, pdb_struct, tree_struct.Ent)
 
             list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
-                                              n_cut_sites, pdb_struct, initial_ent_num, separation)
+                                              n_cut_sites, pdb_struct, initial_ent_num, separation, max_distance)
             attach_nodes(tree_struct, list_of_new_nodes)
         else: 
              # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
             for leaf in tree_struct.leaves:
                 previous_cut_sites = leaf.getIndexPath()
                 list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
-                                                  n_cut_sites, pdb_struct, leaf.Ent, separation)
+                                                  n_cut_sites, pdb_struct, leaf.Ent, separation, max_distance)
                 attach_nodes(leaf, list_of_new_nodes)
         tree_struct.visualize()
 
