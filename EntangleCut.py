@@ -131,6 +131,8 @@ def compute_residue_distance(pdb_struct: MDAnalysis.Universe, resid_config: list
         left = resid_config[each_site] - 1
         right = resid_config[each_site+1] - 1
         tmp_dist = np.linalg.norm(residue_pos[left] - residue_pos[right])
+        #import ipdb; ipdb.set_trace()
+        print(tmp_dist, left, right)
         if tmp_dist > max_distance:
             #print(each_site)
             return -1
@@ -145,10 +147,10 @@ def cut_protein(resid_list:list, site_indices:list, max_site: int):
         max_site must be smaller than n_residue - 1"""
 
     # check if input exceed max_site
-    mask = np.array(site_indices) >= max_site
+    mask = np.array(site_indices) > max_site
     # all elements must be 0 (site_index >= max_site is false for all input site indices)
     if (mask.prod() != 0):
-        exit("input site_indices >= max_site is not allowed")
+        exit("input site_indices > max_site is not allowed")
     else:
         # all indices are legit, sort the indices so that we start from small indices to large
         # essentially left to right
@@ -211,8 +213,11 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
        and return them as a list of new nodes"""
     
     list_of_new_nodes = []
-    for cut_site_index in range(n_cut_sites):
-        print("working on cut_site_index = %d ..."%(cut_site_index))
+
+    # can't cut after the last residue
+    for cut_site_index in resid_list[:-1]:
+    
+        #print("working on cut_site_index = %d ..."%(cut_site_index))
         # need to unpack the tree structure, so that for each path
         # one could get a list of indices on the path, to form a local_cut_sites list
 
@@ -292,11 +297,22 @@ def parse_arg():
     
     parser.add_argument("-f", type=str, default = "./pdbs/native_chain_B.pdb", help="required field for input pdb file")
     parser.add_argument("-s", type=int, default = 4, help="minimum cut site indices separations, default = 4")
-    parser.add_argument("-m", type=int, default = 8, help="maximum geometric distance threshold between two re-connected sites in Angstrom, default = 8")
+    parser.add_argument("-m", type=float, default = 8, help="maximum geometric distance threshold between two re-connected sites in Angstrom, default = 8")
     parser.add_argument("-i", type=int, default = 3, help="maximum number of concurrent cut sites to consider, default = 3")
 
     return parser.parse_args()
 
+def pack_all_nodes(root_node: IndexNode, resid_list: list, ent_num: int):
+    """attach all resid in the resid_list to the root_node,
+       while assigning the same ent_num to all attached node.
+       This function is mainly used to bypass the situation where a single cut
+       site doesn't produce a valid candidate
+    """
+    # can't cut after the last residue
+    for cut_site_index in resid_list[:-1]:
+        node = IndexNode("{index}".format(index=cut_site_index), Ent=ent_num, Index=cut_site_index, parent = root_node)
+
+    return
 
 def main():
 
@@ -335,10 +351,6 @@ def main():
     
     # for now limit the maximum concurrent cut to 5
     while (n_cut < max_iteration):
-        # need a place to hold temp indices
-        local_index = -1
-        # here is the place to tranverse the paths of the node, 
-        # for each leaf of the tree_struct, 
 
         # if we are starting, no need to check for leaves, directly continue to test
         # all 302 cut sites for n_cut = 1 scenarios
@@ -349,6 +361,15 @@ def main():
             list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
                                               n_cut_sites, pdb_struct, initial_ent_num, separation, max_distance)
             attach_nodes(tree_struct, list_of_new_nodes)
+            # if no candidate from this round
+            if (len(list_of_new_nodes) == 0):
+                # 
+                pack_all_nodes(tree_struct, resid_list, 99)
+                #previous_cut_sites = resid_list.copy()
+            else:
+                attach_nodes(tree_struct, list_of_new_nodes)
+
+
         else: 
              # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
             for leaf in tree_struct.leaves:
