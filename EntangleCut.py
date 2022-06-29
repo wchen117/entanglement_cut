@@ -132,7 +132,8 @@ def compute_residue_distance(pdb_struct: MDAnalysis.Universe, resid_config: list
         right = resid_config[each_site+1] - 1
         tmp_dist = np.linalg.norm(residue_pos[left] - residue_pos[right])
         #import ipdb; ipdb.set_trace()
-        print(tmp_dist, left, right)
+        print("dist = %.2f \AA"%(tmp_dist))
+        #print("dist = {dist} \AA, sites = "tmp_dist, left, right)
         if tmp_dist > max_distance:
             #print(each_site)
             return -1
@@ -240,13 +241,15 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                 # compute the number of entanglement (perhaps G. score) per configuration
                 # need a copy of the current pdb_struct to create new_pdb 
                 tmp_pdb = construct_pdb(each_config, resid_list, pdb_struct.copy())
+                print("local_cut_sites = ", local_cut_sites)
                 # we can try to enforce the constrain (<= 8 angstrom inter-residue distance) here
                 distance_constrain = compute_residue_distance(tmp_pdb, each_config, max_distance)
                 # the reconnected residues are further apart than 8 angstrom
                 if distance_constrain < 0:
+                    print("reconnect constrain not feasible")
                     break
                 tmp_ent_num = ent_calc_wrapper(tmp_pdb)
-                print("local_cut_sites = ", local_cut_sites)
+               
                 print("config = ", each_config)
 
                 #print("cut_site_index {cut_site} return {num_ent} entanglements".\
