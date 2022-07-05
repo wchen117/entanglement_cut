@@ -261,6 +261,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                     out_name = "_".join(str(x) for x in local_cut_sites)
                     write_pdb(tmp_pdb, "{name}.pdb".format(name = out_name))
                     # can we just .... exit here?
+                    print("found a candidate, writing its pdb to current folder, exit!")
                     exit(0) 
                     #import ipdb; ipdb.set_trace()
                 
@@ -301,7 +302,7 @@ def parse_arg():
     parser.add_argument("-f", type=str, default = "./pdbs/native_chain_B.pdb", help="required field for input pdb file")
     parser.add_argument("-s", type=int, default = 4, help="minimum cut site indices separations, default = 4")
     parser.add_argument("-m", type=float, default = 8, help="maximum geometric distance threshold between two re-connected sites in Angstrom, default = 8")
-    parser.add_argument("-i", type=int, default = 3, help="maximum number of concurrent cut sites to consider, default = 3")
+    parser.add_argument("-i", type=int, default = 5, help="maximum number of concurrent cut sites to consider, default = 3")
 
     return parser.parse_args()
 
