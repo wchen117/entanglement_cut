@@ -57,7 +57,7 @@ def stride_wrapper(pdb_file_name: str, pdb_length: int):
         parsed_indices = parse_stride_output(stride_output)
 
         # hard code the size for now, TBD
-        masked_array = np.ones(pdb_length)
+        masked_array = np.ones(pdb_length, dtype=int)
         for each_pair in parsed_indices:
             # the resid starts from 1 
             ss_start_index = int(each_pair[0] - 1)
@@ -231,7 +231,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
         if site_boolean == 0:
             break
          
-        #local_cut_sites = [5,250]
+        #local_cut_sites = [13,8]
         # see if the cut_site_index cuts into the secondary structure identified by stride program
         if (protein_mask[cut_site_index] == 1 and cut_site_index not in already_cutted_sites):
             nested_resid_pieces = cut_protein(resid_list, local_cut_sites, n_cut_sites)
@@ -247,7 +247,7 @@ def iterative_cut(already_cutted_sites: list, protein_mask: np.ndarray, resid_li
                 # the reconnected residues are further apart than 8 angstrom
                 if distance_constrain < 0:
                     print("reconnect constrain not feasible")
-                    break
+                    continue
                 tmp_ent_num = ent_calc_wrapper(tmp_pdb)
                
                 print("config = ", each_config)
@@ -318,6 +318,15 @@ def pack_all_nodes(root_node: IndexNode, resid_list: list, ent_num: int):
 
     return
 
+def enforce_secondary_structure_constrain(resid_list: list, protein_mask: np.ndarray):
+    """ used explicitely to enforce the secondary structure constrain 
+        at the end of n_cut = 1, if no viable candidate is selected
+    """
+    local_resid = np.array(resid_list)
+    mask = local_resid * protein_mask
+
+    return list(local_resid[mask != 0])
+
 def main():
 
     # parse command line argument
@@ -351,7 +360,7 @@ def main():
     # we use the IndexNode class for this
     # the root node has a default index of -1 
     tree_struct = IndexNode("root", Ent=initial_ent_num)
- 
+    
     
     # for now limit the maximum concurrent cut to 5
     while (n_cut < max_iteration):
@@ -364,13 +373,16 @@ def main():
 
             list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
                                               n_cut_sites, pdb_struct, initial_ent_num, separation, max_distance)
-            attach_nodes(tree_struct, list_of_new_nodes)
+            #attach_nodes(tree_struct, list_of_new_nodes)
             # if no candidate from this round
             if (len(list_of_new_nodes) == 0):
                 # 
-                pack_all_nodes(tree_struct, resid_list, 99)
+                #import ipdb; ipdb.set_trace()
+                allowed_resids = enforce_secondary_structure_constrain(resid_list, protein_mask)
+                pack_all_nodes(tree_struct, allowed_resids, 99)
                 #previous_cut_sites = resid_list.copy()
             else:
+                
                 attach_nodes(tree_struct, list_of_new_nodes)
 
 
