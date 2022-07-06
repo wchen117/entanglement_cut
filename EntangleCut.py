@@ -387,12 +387,20 @@ def main():
 
 
         else: 
+            
              # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
             for leaf in tree_struct.leaves:
-                previous_cut_sites = leaf.getIndexPath()
-                list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
-                                                  n_cut_sites, pdb_struct, leaf.Ent, separation, max_distance)
-                attach_nodes(leaf, list_of_new_nodes)
+                
+                if leaf.depth + 1 == n_cut:
+
+                    previous_cut_sites = leaf.getIndexPath()
+                    list_of_new_nodes = iterative_cut(previous_cut_sites, protein_mask, resid_list,\
+                                                      n_cut_sites, pdb_struct, leaf.Ent, separation, max_distance)
+                    attach_nodes(leaf, list_of_new_nodes)
+                else:
+                    continue
+
+
         tree_struct.visualize()
 
         n_cut = n_cut + 1
