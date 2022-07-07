@@ -363,7 +363,7 @@ def main():
     
     
     # for now limit the maximum concurrent cut to 5
-    while (n_cut < max_iteration):
+    while (n_cut <= max_iteration):
 
         # if we are starting, no need to check for leaves, directly continue to test
         # all 302 cut sites for n_cut = 1 scenarios
@@ -390,7 +390,7 @@ def main():
             
              # for each terminal nodes in this tree, for n = 2, it's layer 2, for n =3, it's layer 3 
             for leaf in tree_struct.leaves:
-                
+                # only care about the most extended layers, avoid recalculating the previous layers
                 if leaf.depth + 1 == n_cut:
 
                     previous_cut_sites = leaf.getIndexPath()
